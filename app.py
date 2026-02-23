@@ -11,7 +11,7 @@ sys.path.insert(0, str(SRC))
 import numpy as np
 import pandas as pd
 import streamlit as st
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
 # --- Debug (keep for now, delete after it works) ---
 import windforge  # noqa
@@ -95,62 +95,106 @@ run = st.button("▶ Run simulation", type="primary")
 # -------------------------
 # Main run
 # -------------------------
-if run:
-    p = RotorParams(I=I, b=b, tau_c=tau_c, k_wind=0.6)
-    g = GeneratorParams(R_g=R_g, L=L, k_e=k_e, k_t=k_t, R_load=R_bias)
-    a = AeroParams(rho=1.225, R=R, beta=0.0)
-    mp = MPPTParams(lambda_opt=lambda_opt, Kp=Kp, Ki=Ki, R_min=R_min, R_max=R_max, R_bias=R_bias)
-    cfg = MPPTSimConfig(t_end=t_end, dt=dt)
+# -------------------------
+# Plot 1 — Wind speed
+# -------------------------
+fig_wind = go.Figure()
+fig_wind.add_trace(go.Scatter(
+    x=res.t,
+    y=v_arr,
+    mode="lines",
+    name="Wind speed",
+))
+fig_wind.update_layout(
+    title="Wind Speed (m/s)",
+    xaxis_title="Time (s)",
+    yaxis_title="Wind speed (m/s)",
+    template="plotly_white",
+)
+st.plotly_chart(fig_wind, use_container_width=True)
 
-    res = run_rotor_mppt_sim_profile(wind=wind, p=p, g=g, a=a, mp=mp, cfg=cfg)
-    v_arr = np.array([wind(t) for t in res.t], dtype=float)
 
-    m = compute_metrics(
-        t=res.t,
-        lambda_ts=res.lambda_ts,
-        cp=res.cp,
-        power_load=res.power_load,
-        lambda_opt=mp.lambda_opt,
-    )
+# -------------------------
+# Plot 2 — Tip-speed ratio
+# -------------------------
+fig_lambda = go.Figure()
+fig_lambda.add_trace(go.Scatter(
+    x=res.t,
+    y=res.lambda_ts,
+    mode="lines",
+    name="λ"
+))
+fig_lambda.add_trace(go.Scatter(
+    x=res.t,
+    y=[lambda_opt]*len(res.t),
+    mode="lines",
+    name="λ_opt",
+    line=dict(dash="dash")
+))
+fig_lambda.update_layout(
+    title="Tip-Speed Ratio (λ)",
+    xaxis_title="Time (s)",
+    yaxis_title="λ",
+    template="plotly_white",
+)
+st.plotly_chart(fig_lambda, use_container_width=True)
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Energy (Wh)", f"{m.energy_Wh:.2f}")
-    c2.metric("Avg Cp", f"{m.avg_cp:.3f}")
-    c3.metric("RMS λ error", f"{m.rms_lambda_error:.3f}")
-    c4.metric("Settling time (s)", "N/A" if m.settling_time_s is None else f"{m.settling_time_s:.2f}")
 
-    # Plots
-    fig1 = plt.figure()
-    plt.plot(res.t, v_arr)
-    plt.title("Wind speed (m/s)")
-    plt.grid(True)
-    st.pyplot(fig1, clear_figure=True)
+# -------------------------
+# Plot 3 — Cp
+# -------------------------
+fig_cp = go.Figure()
+fig_cp.add_trace(go.Scatter(
+    x=res.t,
+    y=res.cp,
+    mode="lines",
+    name="Cp"
+))
+fig_cp.update_layout(
+    title="Power Coefficient Cp",
+    xaxis_title="Time (s)",
+    yaxis_title="Cp",
+    template="plotly_white",
+)
+st.plotly_chart(fig_cp, use_container_width=True)
 
-    fig2 = plt.figure()
-    plt.plot(res.t, res.lambda_ts, label="lambda")
-    plt.axhline(lambda_opt, linestyle="--", label="lambda_opt")
-    plt.title("Tip-speed ratio λ")
-    plt.legend()
-    plt.grid(True)
-    st.pyplot(fig2, clear_figure=True)
 
-    fig3 = plt.figure()
-    plt.plot(res.t, res.cp)
-    plt.title("Power coefficient Cp")
-    plt.grid(True)
-    st.pyplot(fig3, clear_figure=True)
+# -------------------------
+# Plot 4 — R_load
+# -------------------------
+fig_r = go.Figure()
+fig_r.add_trace(go.Scatter(
+    x=res.t,
+    y=res.R_load,
+    mode="lines",
+    name="R_load"
+))
+fig_r.update_layout(
+    title="MPPT Load Resistance (Ω)",
+    xaxis_title="Time (s)",
+    yaxis_title="R_load (Ω)",
+    template="plotly_white",
+)
+st.plotly_chart(fig_r, use_container_width=True)
 
-    fig4 = plt.figure()
-    plt.plot(res.t, res.R_load)
-    plt.title("R_load command (Ω)")
-    plt.grid(True)
-    st.pyplot(fig4, clear_figure=True)
 
-    fig5 = plt.figure()
-    plt.plot(res.t, res.power_load)
-    plt.title("Load power (W)")
-    plt.grid(True)
-    st.pyplot(fig5, clear_figure=True)
+# -------------------------
+# Plot 5 — Power
+# -------------------------
+fig_power = go.Figure()
+fig_power.add_trace(go.Scatter(
+    x=res.t,
+    y=res.power_load,
+    mode="lines",
+    name="Load Power"
+))
+fig_power.update_layout(
+    title="Electrical Power Output (W)",
+    xaxis_title="Time (s)",
+    yaxis_title="Power (W)",
+    template="plotly_white",
+)
+st.plotly_chart(fig_power, use_container_width=True)
 
     # Download CSV
     df = pd.DataFrame({
