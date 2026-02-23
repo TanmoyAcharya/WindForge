@@ -1,74 +1,42 @@
 from __future__ import annotations
 
+from pathlib import Path
+import sys
+
+# --- MUST come before importing windforge ---
+ROOT = Path(__file__).resolve().parent
+SRC = ROOT / "src"
+sys.path.insert(0, str(SRC))
+
 import numpy as np
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
+
+# --- Debug (keep for now, delete after it works) ---
+import windforge  # noqa
+st.sidebar.caption("🔧 Debug (remove later)")
+st.sidebar.write("windforge from:", windforge.__file__)
+st.sidebar.write("SRC exists:", SRC.exists())
+st.sidebar.write("sys.path[0]:", sys.path[0])
+
+# --- WindForge imports (ONLY ONCE) ---
 from windforge.wind import ConstantWind, StepGust, RampWind, SineWind
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
-from pathlib import Path
-import sys
-
-ROOT = Path(__file__).resolve().parent
-SRC = ROOT / "src"
-if SRC.exists():
-    sys.path.insert(0, str(SRC))
-import importlib
-import streamlit as st
-from pathlib import Path
-
-st.write("SRC exists:", (Path(__file__).resolve().parent / "src").exists())
-st.write("Top sys.path[0:3]:", sys.path[:3])
-
-import windforge
-st.write("windforge imported from:", windforge.__file__)
-
-# Check whether sim_mppt file exists in the folder Streamlit sees
-pkg_dir = Path(windforge.__file__).resolve().parent
-st.write("Package dir:", str(pkg_dir))
-st.write("Files in package dir:", [p.name for p in pkg_dir.glob("*.py")])    
-from pathlib import Path
-import sys
-import streamlit as st
-import importlib
-
-ROOT = Path(__file__).resolve().parent
-SRC = ROOT / "src"
-sys.path.insert(0, str(SRC))  # force it, always
-
-st.write("ROOT:", str(ROOT))
-st.write("SRC exists:", SRC.exists())
-st.write("sys.path[0:5]:", sys.path[:5])
-
-# Import windforge base and show location
-import windforge
-st.write("windforge.__file__:", windforge.__file__)
-
-# Try-import metrics and show full exception
-try:
-    import windforge.metrics as m
-    st.write("metrics module file:", m.__file__)
-    st.write("metrics has compute_metrics:", hasattr(m, "compute_metrics"))
-except Exception as e:
-    st.error("Import windforge.metrics failed:")
-    st.exception(e)
-    st.stop()
-
 from windforge.rotor import RotorParams
 from windforge.generator import GeneratorParams
 from windforge.aero import AeroParams
 from windforge.controllers import MPPTParams
 from windforge.sim_mppt import MPPTSimConfig, run_rotor_mppt_sim_profile
-from windforge.wind import ConstantWind, StepGust, RampWind, SineWind
+from windforge.metrics import compute_metrics
 
-from windforge.metrics import compute_metrics  # will succeed after debug confirms
 
 st.set_page_config(page_title="WindForge Simulator", layout="wide")
 st.title("🌬️ WindForge — Wind Turbine MPPT Simulator")
 st.caption("Cp(λ) aerodynamics + generator electromechanics + MPPT load control + gust profiles")
 
+# -------------------------
+# Sidebar controls
+# -------------------------
 with st.sidebar:
     st.header("Wind Profile")
     profile = st.selectbox("Profile", ["Constant", "Step Gust", "Ramp", "Sine"])
@@ -76,17 +44,20 @@ with st.sidebar:
     if profile == "Constant":
         v = st.slider("Wind speed (m/s)", 2.0, 20.0, 8.0, 0.5)
         wind = ConstantWind(v=v)
+
     elif profile == "Step Gust":
         v0 = st.slider("v0 (m/s)", 2.0, 20.0, 7.0, 0.5)
         v1 = st.slider("v1 (m/s)", 2.0, 25.0, 11.0, 0.5)
         t_step = st.slider("t_step (s)", 0.5, 30.0, 8.0, 0.5)
         wind = StepGust(v0=v0, v1=v1, t_step=t_step)
+
     elif profile == "Ramp":
         v0 = st.slider("v0 (m/s)", 2.0, 20.0, 6.0, 0.5)
         v1 = st.slider("v1 (m/s)", 2.0, 25.0, 12.0, 0.5)
         t0 = st.slider("t0 (s)", 0.0, 20.0, 2.0, 0.5)
         t1 = st.slider("t1 (s)", 1.0, 40.0, 12.0, 0.5)
         wind = RampWind(v0=v0, v1=v1, t0=t0, t1=t1)
+
     else:
         v_mean = st.slider("Mean wind (m/s)", 2.0, 20.0, 9.0, 0.5)
         amp = st.slider("Amplitude (m/s)", 0.0, 8.0, 2.0, 0.5)
@@ -121,6 +92,9 @@ with st.sidebar:
 
 run = st.button("▶ Run simulation", type="primary")
 
+# -------------------------
+# Main run
+# -------------------------
 if run:
     p = RotorParams(I=I, b=b, tau_c=tau_c, k_wind=0.6)
     g = GeneratorParams(R_g=R_g, L=L, k_e=k_e, k_t=k_t, R_load=R_bias)
