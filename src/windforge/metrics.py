@@ -16,7 +16,7 @@ class RunMetrics:
 
 
 def _trapz(x: np.ndarray, y: np.ndarray) -> float:
-    return float(np.trapz(y, x))
+    return float(np.trapezoid(y, x))
 
 
 def compute_metrics(

@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
+from windforge.wind import ConstantWind, StepGust, RampWind, SineWind
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
@@ -14,6 +15,46 @@ ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
 if SRC.exists():
     sys.path.insert(0, str(SRC))
+import importlib
+import streamlit as st
+from pathlib import Path
+
+st.write("SRC exists:", (Path(__file__).resolve().parent / "src").exists())
+st.write("Top sys.path[0:3]:", sys.path[:3])
+
+import windforge
+st.write("windforge imported from:", windforge.__file__)
+
+# Check whether sim_mppt file exists in the folder Streamlit sees
+pkg_dir = Path(windforge.__file__).resolve().parent
+st.write("Package dir:", str(pkg_dir))
+st.write("Files in package dir:", [p.name for p in pkg_dir.glob("*.py")])    
+from pathlib import Path
+import sys
+import streamlit as st
+import importlib
+
+ROOT = Path(__file__).resolve().parent
+SRC = ROOT / "src"
+sys.path.insert(0, str(SRC))  # force it, always
+
+st.write("ROOT:", str(ROOT))
+st.write("SRC exists:", SRC.exists())
+st.write("sys.path[0:5]:", sys.path[:5])
+
+# Import windforge base and show location
+import windforge
+st.write("windforge.__file__:", windforge.__file__)
+
+# Try-import metrics and show full exception
+try:
+    import windforge.metrics as m
+    st.write("metrics module file:", m.__file__)
+    st.write("metrics has compute_metrics:", hasattr(m, "compute_metrics"))
+except Exception as e:
+    st.error("Import windforge.metrics failed:")
+    st.exception(e)
+    st.stop()
 
 from windforge.rotor import RotorParams
 from windforge.generator import GeneratorParams
@@ -22,7 +63,7 @@ from windforge.controllers import MPPTParams
 from windforge.sim_mppt import MPPTSimConfig, run_rotor_mppt_sim_profile
 from windforge.wind import ConstantWind, StepGust, RampWind, SineWind
 
-from windforge.metrics import compute_metrics
+from windforge.metrics import compute_metrics  # will succeed after debug confirms
 
 st.set_page_config(page_title="WindForge Simulator", layout="wide")
 st.title("🌬️ WindForge — Wind Turbine MPPT Simulator")
