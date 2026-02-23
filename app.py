@@ -115,7 +115,24 @@ if run:
         power_load=res.power_load,
         lambda_opt=mp.lambda_opt,
     )
+    avg_power = float(np.mean(res.power_load))
+    peak_power = float(np.max(res.power_load))
+    avg_wind = float(np.mean(v_arr))
+    min_r = float(np.min(res.R_load))
+    max_r = float(np.max(res.R_load))
+    max_cp = float(np.max(res.cp))
 
+    c5, c6, c7, c8 = st.columns(4)
+    c5.metric("Avg Power (W)", f"{avg_power:.1f}")
+    c6.metric("Peak Power (W)", f"{peak_power:.1f}")
+    c7.metric("Avg Wind (m/s)", f"{avg_wind:.2f}")
+    c8.metric("Max Cp", f"{max_cp:.3f}")
+
+    c9, c10, c11, c12 = st.columns(4)
+    c9.metric("R_load min (Ω)", f"{min_r:.2f}")
+    c10.metric("R_load max (Ω)", f"{max_r:.2f}")
+    c11.metric("ω min (rad/s)", f"{float(np.min(res.omega)):.2f}")
+    c12.metric("ω max (rad/s)", f"{float(np.max(res.omega)):.2f}")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Energy (Wh)", f"{m.energy_Wh:.2f}")
     c2.metric("Avg Cp", f"{m.avg_cp:.3f}")
@@ -177,6 +194,49 @@ if run:
         template="plotly_white",
     )
     st.plotly_chart(fig_power, use_container_width=True)
+    fig_cplam = go.Figure()
+    fig_cplam.add_trace(go.Scatter(
+    x=res.lambda_ts,
+    y=res.cp,
+    mode="markers",
+    name="Trajectory",
+    marker=dict(size=5),
+))
+    fig_cplam.add_trace(go.Scatter(
+    x=[lambda_opt, lambda_opt],
+    y=[0, max(0.6, float(np.max(res.cp))*1.1)],
+    mode="lines",
+    name="λ_opt",
+    line=dict(dash="dash"),
+))
+    fig_cplam.update_layout(
+    title="Cp–λ Tracking (MPPT Performance)",
+    xaxis_title="λ (tip-speed ratio)",
+    yaxis_title="Cp",
+    template="plotly_white",
+)
+    st.plotly_chart(fig_cplam, use_container_width=True)
+
+    fig_wp = go.Figure()
+
+    fig_wp.add_trace(go.Scatter(
+    x=res.t, y=v_arr, name="Wind speed (m/s)",
+    mode="lines", yaxis="y1"
+))
+
+    fig_wp.add_trace(go.Scatter(
+    x=res.t, y=res.power_load, name="Power (W)",
+    mode="lines", yaxis="y2"
+))
+
+    fig_wp.update_layout(
+    title="Wind & Power (Dual Axis)",
+    xaxis_title="Time (s)",
+    yaxis=dict(title="Wind speed (m/s)"),
+    yaxis2=dict(title="Power (W)", overlaying="y", side="right"),
+    template="plotly_white",
+)
+    st.plotly_chart(fig_wp, use_container_width=True)
 
     # Download CSV
     df = pd.DataFrame({
