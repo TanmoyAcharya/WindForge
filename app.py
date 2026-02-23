@@ -4,6 +4,16 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parent
+SRC = ROOT / "src"
+if SRC.exists():
+    sys.path.insert(0, str(SRC))
 
 from windforge.rotor import RotorParams
 from windforge.generator import GeneratorParams
