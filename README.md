@@ -65,3 +65,11 @@ cd WindForge
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
+
+## Quick start
+
+Activate venv:
+
+```powershell
+.\.venv\Scripts\Activate
+$env:PYTHONPATH=".\src"
