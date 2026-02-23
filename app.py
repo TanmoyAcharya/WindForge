@@ -92,6 +92,33 @@ with st.sidebar:
 
 run = st.button("▶ Run simulation", type="primary")
 
+if run:
+
+    p = RotorParams(...)
+    g = GeneratorParams(...)
+    a = AeroParams(...)
+    mp = MPPTParams(...)
+    cfg = MPPTSimConfig(...)
+
+    res = run_rotor_mppt_sim_profile(...)
+    v_arr = np.array([wind(t) for t in res.t], dtype=float)
+
+    # ---- ALL PLOTS BELOW HERE ----
+
+    fig_wind = go.Figure()
+    fig_wind.add_trace(go.Scatter(
+        x=res.t,
+        y=v_arr,
+        mode="lines",
+        name="Wind speed",
+    ))
+    st.plotly_chart(fig_wind, use_container_width=True)
+
+    # more plots...
+
+else:
+    st.info("Set parameters in the sidebar, then click Run simulation.")
+
 # -------------------------
 # Main run
 # -------------------------
@@ -216,5 +243,6 @@ st.download_button(
         file_name="windforge_results.csv",
         mime="text/csv",
     )
+
 
 st.info("Set parameters in the sidebar, then click **Run simulation**.")
