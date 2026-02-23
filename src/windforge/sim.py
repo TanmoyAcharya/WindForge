@@ -2,15 +2,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 import numpy as np
 from scipy.integrate import solve_ivp
-from .generator import GeneratorParams
-from .rotor import rotor_gen_ode
-from .rotor import RotorParams, rotor_ode, tau_wind_simple, tau_load_simple
 
+from .rotor import RotorParams, rotor_gen_ode, tau_wind_simple
+from .generator import GeneratorParams
 
 
 @dataclass(frozen=True)
 class SimConfig:
-    t_end: float = 20.0
+    t_end: float = 25.0
     dt: float = 0.01
     theta0: float = 0.0
     omega0: float = 0.0
@@ -25,28 +24,13 @@ class SimResult:
     i: np.ndarray
     tau_wind: np.ndarray
     tau_em: np.ndarray
-    power_em: np.ndarray      # tau_em * omega
-    power_load: np.ndarray    # i^2 * R_load
+    power_em: np.ndarray        # tau_em * omega (mechanical->electrical converted power proxy)
+    power_load: np.ndarray      # i^2 * R_load
+    power_copper: np.ndarray    # i^2 * R_g (internal copper loss)
 
 
-def run_rotor_sim(v_wind: float, p: RotorParams, cfg: SimConfig) -> SimResult:
-    n = int(round(cfg.t_end / cfg.dt)) + 1
-    t_eval = np.linspace(0.0, cfg.t_end, n, dtype=float)
-    y0 = np.array([cfg.theta0, cfg.omega0], dtype=float)
-
-    sol = solve_ivp(
-        fun=lambda t, y: rotor_ode(t, y, v_wind=v_wind, p=p),
-        t_span=(0.0, cfg.t_end),
-        y0=y0,
-        t_eval=t_eval,
-        method="RK45",
-        rtol=1e-7,
-        atol=1e-9,
-    )
-    if not sol.success:
-        raise RuntimeError(f"ODE solver failed: {sol.message}")
-    
 def run_rotor_gen_sim(v_wind: float, p: RotorParams, g: GeneratorParams, cfg: SimConfig) -> SimResult:
+    # Use linspace to avoid t_eval outside t_span due to floating point rounding
     n = int(round(cfg.t_end / cfg.dt)) + 1
     t_eval = np.linspace(0.0, cfg.t_end, n, dtype=float)
 
@@ -61,18 +45,22 @@ def run_rotor_gen_sim(v_wind: float, p: RotorParams, g: GeneratorParams, cfg: Si
         rtol=1e-7,
         atol=1e-9,
     )
+
     if not sol.success:
         raise RuntimeError(f"ODE solver failed: {sol.message}")
 
     theta = sol.y[0]
     omega = sol.y[1]
-    cur = sol.y[2]
+    cur = sol.y[2]  # <-- define cur BEFORE using it
 
     tau_w = np.array([tau_wind_simple(w, v_wind, p) for w in omega], dtype=float)
-    tau_em = g.k_t * cur
+
+    # Sign convention consistent with rotor_gen_ode:
+    tau_em = -g.k_t * cur
 
     power_em = tau_em * omega
     power_load = (cur ** 2) * g.R_load
+    power_copper = (cur ** 2) * g.R_g
 
     return SimResult(
         t=sol.t,
@@ -83,5 +71,5 @@ def run_rotor_gen_sim(v_wind: float, p: RotorParams, g: GeneratorParams, cfg: Si
         tau_em=tau_em,
         power_em=power_em,
         power_load=power_load,
+        power_copper=power_copper,
     )
-
