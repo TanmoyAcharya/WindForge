@@ -24,13 +24,12 @@ class SimResult:
     i: np.ndarray
     tau_wind: np.ndarray
     tau_em: np.ndarray
-    power_em: np.ndarray        # tau_em * omega (mechanical->electrical converted power proxy)
-    power_load: np.ndarray      # i^2 * R_load
-    power_copper: np.ndarray    # i^2 * R_g (internal copper loss)
+    power_em: np.ndarray
+    power_load: np.ndarray
+    power_copper: np.ndarray
 
 
 def run_rotor_gen_sim(v_wind: float, p: RotorParams, g: GeneratorParams, cfg: SimConfig) -> SimResult:
-    # Use linspace to avoid t_eval outside t_span due to floating point rounding
     n = int(round(cfg.t_end / cfg.dt)) + 1
     t_eval = np.linspace(0.0, cfg.t_end, n, dtype=float)
 
@@ -51,11 +50,11 @@ def run_rotor_gen_sim(v_wind: float, p: RotorParams, g: GeneratorParams, cfg: Si
 
     theta = sol.y[0]
     omega = sol.y[1]
-    cur = sol.y[2]  # <-- define cur BEFORE using it
+    cur = sol.y[2]
 
     tau_w = np.array([tau_wind_simple(w, v_wind, p) for w in omega], dtype=float)
 
-    # Sign convention consistent with rotor_gen_ode:
+    # Must match sign convention in rotor_gen_ode
     tau_em = -g.k_t * cur
 
     power_em = tau_em * omega
