@@ -12,6 +12,8 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
+if "runs" not in st.session_state:
+    st.session_state.runs = {}
 
 # --- Debug (remove later) ---
 import windforge  # noqa
