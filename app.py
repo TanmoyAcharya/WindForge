@@ -197,7 +197,7 @@ fig_power.update_layout(
 st.plotly_chart(fig_power, use_container_width=True)
 
     # Download CSV
-    df = pd.DataFrame({
+df = pd.DataFrame({
         "t": res.t,
         "v_wind": v_arr,
         "theta": res.theta,
@@ -210,11 +210,12 @@ st.plotly_chart(fig_power, use_container_width=True)
         "cp": res.cp,
         "power_load": res.power_load,
     })
-    st.download_button(
+st.download_button(
         "⬇ Download results CSV",
         data=df.to_csv(index=False).encode("utf-8"),
         file_name="windforge_results.csv",
         mime="text/csv",
     )
 else:
-    st.info("Set parameters in the sidebar, then click **Run simulation**.")
+
+st.info("Set parameters in the sidebar, then click **Run simulation**.")
