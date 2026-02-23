@@ -216,6 +216,5 @@ st.download_button(
         file_name="windforge_results.csv",
         mime="text/csv",
     )
-else:
 
 st.info("Set parameters in the sidebar, then click **Run simulation**.")
