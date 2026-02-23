@@ -9,8 +9,8 @@ class GeneratorParams:
     L: float = 0.02       # inductance (H)
 
     # Electromechanical constants
-    k_e: float = 0.2      # back-EMF constant (V per rad/s)
-    k_t: float = 0.2      # torque constant (N*m per A)
+    k_e: float = 0.18      # back-EMF constant (V per rad/s)
+    k_t: float = 0.18     # torque constant (N*m per A)
 
     # Load
-    R_load: float = 5.0   # resistive load (ohm)
+    R_load: float = 6.0   # resistive load (ohm)

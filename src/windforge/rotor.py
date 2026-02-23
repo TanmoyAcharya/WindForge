@@ -2,12 +2,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 import numpy as np
 from .generator import GeneratorParams
+from .aero import AeroParams, aero_torque_cp
+from .controllers import MPPTParams, mppt_rload
 
 @dataclass(frozen=True)
 class RotorParams:
     I: float = 0.25
-    b: float = 0.02
-    tau_c: float = 0.1
+    b: float = 0.01
+    tau_c: float = 0.05
     k_wind: float = 0.6
     k_load: float = 0.08
     omega_eps: float = 1e-3
@@ -57,7 +59,7 @@ def rotor_gen_ode(t: float, y: np.ndarray, v_wind: float, p: RotorParams, g: Gen
 
     # Generator electromechanics
     e = g.k_e * omega
-    tau_em = g.k_t * i  # electromagnetic torque opposing motion
+    tau_em = -g.k_t * i  # electromagnetic torque opposing motion
 
     # Rotor dynamics
     domega = (tw - tau_em - tau_visc - tau_coul) / p.I
@@ -68,3 +70,64 @@ def rotor_gen_ode(t: float, y: np.ndarray, v_wind: float, p: RotorParams, g: Gen
     di = (-(R_total * i) - e) / g.L
 
     return np.array([dtheta, domega, di], dtype=float)
+
+def rotor_gen_cp_ode(t, y, v_wind, p, g, a: AeroParams):
+    """
+    y = [theta, omega, i]
+    uses Cp(lambda) aero torque.
+    """
+    theta = float(y[0])
+    omega = float(y[1])
+    i = float(y[2])
+
+    tw, cp, lam = aero_torque_cp(omega=omega, v_wind=v_wind, a=a)
+
+    tau_visc = p.b * omega
+    tau_coul = p.tau_c * smooth_sign(omega, p.omega_eps)
+
+    e = g.k_e * omega
+    tau_em = -g.k_t * i
+
+    domega = (tw - tau_em - tau_visc - tau_coul) / p.I
+    dtheta = omega
+
+    R_total = g.R_g + g.R_load
+    di = (-(R_total * i) - e) / g.L
+
+    return np.array([dtheta, domega, di], dtype=float)
+
+def rotor_gen_cp_mppt_ode(t, y, v_wind, p, g, a, mp: MPPTParams):
+    """
+    y = [theta, omega, i, z]
+      z = integral of speed error (omega_ref - omega)
+    """
+    theta = float(y[0])
+    omega = float(y[1])
+    i = float(y[2])
+    z = float(y[3])
+
+    # Aero torque from Cp(lambda)
+    tw, cp, lam = aero_torque_cp(omega=omega, v_wind=v_wind, a=a)
+
+    # MPPT PI controller chooses R_load
+    R_load, omega_ref, e = mppt_rload(omega=omega, v_wind=v_wind, rotor_R=a.R, z_int=z, mp=mp)
+
+    # Mechanical frictions
+    tau_visc = p.b * omega
+    tau_coul = p.tau_c * smooth_sign(omega, p.omega_eps)
+
+    # Generator electromechanics
+    e_back = g.k_e * omega
+    tau_em = -g.k_t * i
+
+    domega = (tw - tau_em - tau_visc - tau_coul) / p.I
+    dtheta = omega
+
+    # Electrical dynamics with controlled load
+    R_total = g.R_g + R_load
+    di = (-(R_total * i) - e_back) / g.L
+
+    # Integral of speed error
+    dz = e
+
+    return np.array([dtheta, domega, di, dz], dtype=float)

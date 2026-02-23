@@ -15,17 +15,35 @@ def steady_mean(x: np.ndarray) -> float:
 
 
 def eval_power_for_Rload(v_wind: float, R_load: float) -> float:
-    # Keep rotor params fixed
     p = RotorParams(I=0.25, b=0.02, tau_c=0.1, k_wind=0.6)
 
-    # Generator params, optimize only R_load
     g = GeneratorParams(R_g=0.6, L=0.02, k_e=0.25, k_t=0.25, R_load=float(R_load))
-
-    # Sim config
     cfg = SimConfig(t_end=25.0, dt=0.01, omega0=0.0, i0=0.0)
 
     res = run_rotor_gen_sim(v_wind=v_wind, p=p, g=g, cfg=cfg)
-    return steady_mean(res.power_load)
+
+    # steady window
+    n = len(res.t)
+    i0 = int(0.8 * n)
+    omega_ss = float(np.mean(res.omega[i0:]))
+    i_ss = float(np.mean(res.i[i0:]))
+
+    # objective = steady load power
+    P = float(np.mean(res.power_load[i0:]))
+
+    # engineering limits
+    omega_max = 200.0  # rad/s
+    i_max = 20.0       # A
+
+    # penalty (quadratic) if exceed limits
+    penalty = 0.0
+    if abs(omega_ss) > omega_max:
+        penalty += (abs(omega_ss) - omega_max) ** 2
+    if abs(i_ss) > i_max:
+        penalty += (abs(i_ss) - i_max) ** 2
+
+    # subtract penalty scaled to watts
+    return P - 50.0 * penalty
 
 
 def main() -> None:
