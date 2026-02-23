@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "windforge"
+version = "0.1.0"
+description = "Electro-mechanical rotor and generator simulation toolkit"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Tanmoy Acharya" }]
+dependencies = [
+  "numpy>=1.23",
+  "scipy>=1.10",
+  "matplotlib>=3.7",
+  "pandas>=2.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/windforge"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
