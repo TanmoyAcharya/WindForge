@@ -1,0 +1,40 @@
+from __future__ import annotations
+from dataclasses import dataclass
+import numpy as np
+
+
+@dataclass(frozen=True)
+class RotorParams:
+    I: float = 0.25
+    b: float = 0.02
+    tau_c: float = 0.1
+    k_wind: float = 0.6
+    k_load: float = 0.08
+    omega_eps: float = 1e-3
+
+
+def smooth_sign(x: float, eps: float) -> float:
+    return float(x / (abs(x) + eps))
+
+
+def tau_wind_simple(omega: float, v_wind: float, p: RotorParams) -> float:
+    alpha = 0.25
+    return p.k_wind * (v_wind ** 2) / (1.0 + alpha * max(omega, 0.0))
+
+
+def tau_load_simple(omega: float, p: RotorParams) -> float:
+    return p.k_load * omega
+
+
+def rotor_ode(t: float, y: np.ndarray, v_wind: float, p: RotorParams) -> np.ndarray:
+    theta, omega = float(y[0]), float(y[1])
+
+    tw = tau_wind_simple(omega=omega, v_wind=v_wind, p=p)
+    tl = tau_load_simple(omega=omega, p=p)
+
+    tau_visc = p.b * omega
+    tau_coul = p.tau_c * smooth_sign(omega, p.omega_eps)
+
+    domega = (tw - tl - tau_visc - tau_coul) / p.I
+    dtheta = omega
+    return np.array([dtheta, domega], dtype=float)
