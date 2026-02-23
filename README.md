@@ -44,3 +44,24 @@ The system is solved using `scipy.integrate.solve_ivp`.
 ---
 
 ## Project Structure
+WindForge/
+src/windforge/
+rotor.py # Mechanical model
+sim.py # ODE solver and simulation logic
+plots.py # Visualization tools
+examples/
+run_single_case.py
+run_wind_sweep.py
+
+
+
+---
+
+## Installation
+
+```bash
+git clone https://github.com/TanmoyAcharya/WindForge.git
+cd WindForge
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
